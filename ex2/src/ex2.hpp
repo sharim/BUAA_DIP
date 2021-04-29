@@ -15,15 +15,49 @@ enum Kernels {
 
 const float Pi = 3.1415927f;
 
+/*!
+ *  @brief Rotate a kernel 45 degrees clockwise
+ *  @param Kernel_in kernel to be rotated
+ */
 cv::Mat kernel_rotate_45(cv::Mat kernel_in);
-cv::Mat edge(cv::Mat img, uchar kernel_select = SOBEL, int threshold = -1,
-             bool en_binarization = true);
+/*!
+ *  @brief Get edges of image
+ *  @param img image to get edges
+ *  @param kernel_select choose which kernel to use, default is SOBEL
+ *  @param en_binarization enable to binarize the edges-image, default is true
+ *  @param threshold threshold to binarize the edges-image, default is
+ * -1(auto-choose the threshold by OTSU)
+ */
+cv::Mat edge(cv::Mat img, uchar kernel_select = SOBEL,
+             bool en_binarization = true, int threshold = -1);
+/*!
+ *  @brief calculate a threshold for binarizing images by otsu algorithm
+ *  @param img image for calculating it's threshold
+ */
 uchar otsu(cv::Mat img);
+/*!
+ *  @brief binarize image with threshold
+ *  @param src source image
+ *  @param dst destination image
+ *  @param threshold threshold to be used to binarize the image
+ *  @param bk_black default is true, if bk_black is true and the value of pixel
+ * is greater than the threshold, set it to 0xff, otherwise 0;
+ */
 void binarize(cv::InputArray src, cv::OutputArray dst, uchar threshold,
               bool bk_black = true);
+/*!
+ *  @brief edge detection by canny algorithm
+ *  @param img input image
+ *  @param edges output image
+ *  @param low_threshold low threshold for the hysteresis procedure
+ *  @param high_threshold low threshold for the hysteresis procedure
+ *  @param sigma gaussian kernel standard deviation, default is -1(disable
+ * gaussian filter)
+ *  @param gaussian_size gaussian kernel size, default is 0(auto-choose size of
+ * gaussian kernel)
+ */
 void canny(cv::InputArray img, cv::OutputArray edges, uchar low_threshold,
-           uchar high_threshold, uchar sobel_size = 3, float sigma = -1,
-           uchar gaussian_size = 0);
+           uchar high_threshold, float sigma = -1, uchar gaussian_size = 0);
 
 cv::Mat kernel_rotate_45(cv::Mat kernel_in) {
   cv::Mat kernel_out = kernel_in.clone();
@@ -62,8 +96,8 @@ cv::Mat kernel_rotate_45(cv::Mat kernel_in) {
   return kernel_out;
 }
 
-cv::Mat edge(cv::Mat img, uchar kernel_select, int threshold,
-             bool en_binarization) {
+cv::Mat edge(cv::Mat img, uchar kernel_select, bool en_binarization,
+             int threshold) {
   CV_Assert(img.type() == CV_8UC1);
   cv::Mat kernel;
   cv::Mat img_out = cv::Mat::zeros(img.size(), img.type());
@@ -103,7 +137,6 @@ cv::Mat edge(cv::Mat img, uchar kernel_select, int threshold,
       for (int k = 0; k < img_out.cols; k++) {
         q[k] = q[k] >= 0 ? q[k] : -q[k];
         p[k] = p[k] >= q[k] ? p[k] : q[k];
-        // p[k] = p[k] + q[k];
       }
     }
     kernel = kernel_rotate_45(kernel);
@@ -170,8 +203,7 @@ void binarize(cv::InputArray src, cv::OutputArray dst, uchar threshold,
 }
 
 void canny(cv::InputArray img, cv::OutputArray edges, uchar low_threshold,
-           uchar high_threshold, uchar sobel_size, float sigma,
-           uchar gaussian_size) {
+           uchar high_threshold, float sigma, uchar gaussian_size) {
 
   cv::Mat _img = img.getMat();
   CV_Assert(_img.type() == CV_8UC1);
