@@ -25,9 +25,9 @@ int main(int argc, char **argv) {
       cv::imread("../img/src_img/rect-move.bmp", cv::IMREAD_GRAYSCALE);
   cv::Mat img_rect_dft, img_rect_45_dft, img_rect_move_dft;
 
-  ex3::freq(img_rect, img_rect_dft, true);
-  ex3::freq(img_rect_45, img_rect_45_dft, true);
-  ex3::freq(img_rect_move, img_rect_move_dft, true);
+  ex3::freq(img_rect, img_rect_dft, true, true);
+  ex3::freq(img_rect_45, img_rect_45_dft, true, true);
+  ex3::freq(img_rect_move, img_rect_move_dft, true, true);
 
   cv::imshow("rect", img_rect_dft);
   cv::imshow("rect45", img_rect_45_dft);
@@ -47,7 +47,7 @@ int main(int argc, char **argv) {
       cv::imread("../img/src_img/grid.bmp", cv::IMREAD_GRAYSCALE);
   cv::Mat img_grid_dft;
 
-  ex3::freq(img_grid, img_grid_dft, true);
+  ex3::freq(img_grid, img_grid_dft, true, true);
   cv::imshow("grid_dft", img_grid_dft);
   cv::waitKey(0);
 #endif

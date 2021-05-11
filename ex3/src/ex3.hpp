@@ -7,8 +7,10 @@ namespace ex3 {
 void circular_shift(cv::InputArray src, cv::OutputArray dst, cv::Point delta);
 void fft_shift(cv::InputArray src, cv::OutputArray dst);
 void ifft_shift(cv::InputArray src, cv::OutputArray dst);
-void FT(cv::InputArray src, cv::OutputArray dst);
-void freq(cv::InputArray src, cv::OutputArray dst, bool shift = false);
+void FT(cv::InputArray src, cv::OutputArray dst, bool _mag = false,
+        bool log = false);
+void freq(cv::InputArray src, cv::OutputArray dst, bool shift = false,
+          bool _mag = false, bool log = false, bool toUC=true);
 
 void circular_shift(cv::InputArray src, cv::OutputArray dst, cv::Point delta) {
   cv::Mat _src = src.getMat();
@@ -54,7 +56,7 @@ void ifft_shift(cv::InputArray src, cv::OutputArray dst) {
   circular_shift(src, dst, delta);
 }
 
-void FT(cv::InputArray src, cv::OutputArray dst) {
+void FT(cv::InputArray src, cv::OutputArray dst, bool _mag, bool log) {
   cv::Mat _src = src.getMat();
 
   int M = cv::getOptimalDFTSize(_src.rows);
@@ -67,28 +69,49 @@ void FT(cv::InputArray src, cv::OutputArray dst) {
   cv::Mat complexImg;
   cv::merge(planes, 2, complexImg);
   cv::dft(complexImg, complexImg);
-  cv::split(complexImg, planes);
-  cv::magnitude(planes[0], planes[1], planes[0]);
-  cv::Mat mag = planes[0];
-  mag += cv::Scalar::all(1);
-  cv::log(mag, mag);
-
-  dst.create(cv::Size(mag.cols & -2, mag.rows & -2), CV_32FC1);
-  cv::Mat _dst = dst.getMat();
-  mag(cv::Rect(0, 0, mag.cols & -2, mag.rows & -2)).copyTo(_dst);
+  if (_mag) {
+    cv::split(complexImg, planes);
+    cv::magnitude(planes[0], planes[1], planes[0]);
+    cv::Mat mag = planes[0];
+    if (log) {
+      mag += cv::Scalar::all(1);
+      cv::log(mag, mag);
+    }
+    dst.create(cv::Size(mag.cols & -2, mag.rows & -2), CV_32FC1);
+    cv::Mat _dst = dst.getMat();
+    mag(cv::Rect(0, 0, mag.cols & -2, mag.rows & -2)).copyTo(_dst);
+  } else {
+    dst.create(cv::Size(complexImg.cols & -2, complexImg.rows & -2), CV_32FC2);
+    cv::Mat _dst = dst.getMat();
+    complexImg(cv::Rect(0, 0, complexImg.cols & -2, complexImg.rows & -2))
+        .copyTo(_dst);
+  }
 }
 
-void freq(cv::InputArray src, cv::OutputArray dst, bool shift) {
+void freq(cv::InputArray src, cv::OutputArray dst, bool shift, bool mag,
+          bool log, bool toUC) {
   cv::Mat _src = src.getMat();
   CV_Assert(_src.type() == CV_8UC1);
   cv::Mat tmp;
-  FT(_src, tmp);
+  FT(_src, tmp, mag, log);
   if (shift)
     fft_shift(tmp, tmp);
-  cv::normalize(tmp, tmp, 0, 255, cv::NORM_MINMAX);
-  dst.create(tmp.size(), CV_8UC1);
-  cv::Mat _dst = dst.getMat();
-  tmp.convertTo(_dst, CV_8UC1);
+  if (mag) {
+    if (toUC) {
+      cv::normalize(tmp, tmp, 0, 255, cv::NORM_MINMAX);
+      dst.create(tmp.size(), CV_8UC1);
+      cv::Mat _dst = dst.getMat();
+      tmp.convertTo(_dst, CV_8UC1);
+    } else {
+      dst.create(tmp.size(), CV_32FC1);
+      cv::Mat _dst = dst.getMat();
+      tmp.copyTo(_dst);
+    }
+  } else {
+    dst.create(tmp.size(), CV_32FC2);
+    cv::Mat _dst = dst.getMat();
+    tmp.copyTo(_dst);
+  }
 }
 
 } // namespace ex3
