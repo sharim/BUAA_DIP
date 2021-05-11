@@ -3,17 +3,15 @@
 
 // #define SAVE_IMG
 // #define TASK_1
-#define TASK_2
+// #define TASK_2
 // #define TASK_3
-// #define TASK_4
+#define TASK_4
 
 int main(int argc, char **argv) {
 
   /* ---------- Read images ---------- */
   cv::Mat img_cave =
       cv::imread("../img/src_img/cave.jpg", cv::IMREAD_GRAYSCALE);
-  cv::Mat img_lena =
-      cv::imread("../img/src_img/lena.bmp", cv::IMREAD_GRAYSCALE);
 
   /* ---------- Task 1 ---------- */
 #ifdef TASK_1
@@ -47,13 +45,43 @@ int main(int argc, char **argv) {
       cv::imread("../img/src_img/grid.bmp", cv::IMREAD_GRAYSCALE);
   cv::Mat img_grid_dft;
 
-  ex3::freq(img_grid, img_grid_dft, true, true);
+  ex3::freq(img_grid, img_grid_dft, true, true, true);
   cv::imshow("grid_dft", img_grid_dft);
+  cv::waitKey(0);
+
+  cv::Mat img_grid_low, img_grid_high, img_grid_low_dft, img_grid_high_dft;
+
+  ex3::freq_fliter(img_grid, img_grid_low, ex3::IDEAL_LOWPASS, 12.5);
+  cv::imshow("grid_low", img_grid_low);
+  ex3::freq(img_grid_low, img_grid_low_dft, true, true, true);
+  cv::imshow("grid_low_dft", img_grid_low_dft);
+
+  ex3::freq_fliter(img_grid, img_grid_high, ex3::IDEAL_HIGHPASS, 12.5);
+  cv::imshow("grid_high", img_grid_high);
+  ex3::freq(img_grid_high, img_grid_high_dft, true, true, true);
+  cv::imshow("grid_high_dft", img_grid_high_dft);
+
   cv::waitKey(0);
 #endif
 
   /* ---------- Task 3 ---------- */
 #ifdef TASK_3
+  cv::Mat img_lena =
+      cv::imread("../img/src_img/lena.bmp", cv::IMREAD_GRAYSCALE);
+  cv::imshow("lena", img_lena);
+
+  cv::Mat img_lena_gaussian_fliter, img_lena_gaussian_fliter_dft;
+  ex3::freq_fliter(img_lena, img_lena_gaussian_fliter, ex3::GAUSSIAN, 10);
+  cv::imshow("lena_gaussian_fliter", img_lena_gaussian_fliter);
+  ex3::freq(img_lena_gaussian_fliter, img_lena_gaussian_fliter_dft, true, true, true);
+  cv::imshow("lena_gaussian_fliter_dft", img_lena_gaussian_fliter_dft);
+
+  cv::Mat img_lena_butterworth_fliter, img_lena_butterworth_fliter_dft;
+  ex3::freq_fliter(img_lena, img_lena_butterworth_fliter, ex3::BUTTERWORTH, 10);
+  cv::imshow("lena_butterworth_fliter", img_lena_butterworth_fliter);
+  ex3::freq(img_lena_butterworth_fliter, img_lena_butterworth_fliter_dft, true, true, true);
+  cv::imshow("lena_butterworth_fliter_dft", img_lena_butterworth_fliter_dft);
+  cv::waitKey(0);
 #endif
 
   /* ---------- Task 4 ---------- */

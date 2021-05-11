@@ -4,13 +4,32 @@
 #include <opencv2/opencv.hpp>
 
 namespace ex3 {
+
+enum freq_fliter {
+  IDEAL_LOWPASS = 0x10,
+  IDEAL_HIGHPASS = 0x20,
+  GAUSSIAN = 0x30,
+  BUTTERWORTH = 0x40,
+  HOMOMORRPHIC = 0x50
+};
+
 void circular_shift(cv::InputArray src, cv::OutputArray dst, cv::Point delta);
 void fft_shift(cv::InputArray src, cv::OutputArray dst);
 void ifft_shift(cv::InputArray src, cv::OutputArray dst);
+
 void FT(cv::InputArray src, cv::OutputArray dst, bool _mag = false,
         bool log = false);
 void freq(cv::InputArray src, cv::OutputArray dst, bool shift = false,
-          bool _mag = false, bool log = false, bool toUC=true);
+          bool _mag = false, bool log = false, bool toUC = true);
+
+void freq_fliter(cv::InputArray src, cv::OutputArray dst, uchar fliter,
+                 double sigma, uchar n=2);
+void ideal_freq_fliter(cv::InputArray src, cv::OutputArray dst, uchar fliter,
+                       double sigma);
+void gaussian_freq_fliter(cv::InputArray src, cv::OutputArray dst,
+                          double sigma);
+void butterworth_freq_fliter(cv::InputArray src, cv::OutputArray dst,
+                             double sigma, uchar n);
 
 void circular_shift(cv::InputArray src, cv::OutputArray dst, cv::Point delta) {
   cv::Mat _src = src.getMat();
@@ -112,6 +131,108 @@ void freq(cv::InputArray src, cv::OutputArray dst, bool shift, bool mag,
     cv::Mat _dst = dst.getMat();
     tmp.copyTo(_dst);
   }
+}
+
+void freq_fliter(cv::InputArray src, cv::OutputArray dst, uchar fliter,
+                 double sigma, uchar n) {
+  switch (fliter) {
+  case IDEAL_LOWPASS:
+    ideal_freq_fliter(src, dst, IDEAL_LOWPASS, sigma);
+    break;
+  case IDEAL_HIGHPASS:
+    ideal_freq_fliter(src, dst, IDEAL_HIGHPASS, sigma);
+    break;
+  case GAUSSIAN:
+    gaussian_freq_fliter(src, dst, sigma);
+    break;
+  case BUTTERWORTH:
+    butterworth_freq_fliter(src, dst, sigma, n);
+    break;
+  }
+}
+
+void ideal_freq_fliter(cv::InputArray src, cv::OutputArray dst, uchar fliter,
+                       double sigma) {
+  cv::Mat _src = src.getMat();
+
+  cv::Mat src_dft;
+  freq(_src, src_dft, true);
+  float d;
+  int l, h;
+  for (int i = 0; i < src_dft.rows; i++) {
+    cv::Vec2f *p = src_dft.ptr<cv::Vec2f>(i);
+    for (int j = 0; j < src_dft.cols; j++) {
+      d = sqrt(pow(i - (float)src_dft.rows / 2, 2) +
+               pow(j - (float)src_dft.cols / 2, 2));
+      l = (fliter == IDEAL_LOWPASS) ? 1 : 0;
+      h = 1 - l;
+      if (d < sigma) {
+        p[j][0] *= h;
+        p[j][1] *= h;
+      } else {
+        p[j][0] *= l;
+        p[j][1] *= l;
+      }
+    }
+  }
+  ifft_shift(src_dft, src_dft);
+  cv::idft(src_dft, src_dft, cv::DFT_REAL_OUTPUT);
+  dst.create(src_dft.size(), CV_8UC1);
+  cv::Mat _dst = dst.getMat();
+  cv::normalize(src_dft, src_dft, 0, 255, cv::NORM_MINMAX);
+  src_dft.convertTo(_dst, CV_8UC1);
+}
+
+void gaussian_freq_fliter(cv::InputArray src, cv::OutputArray dst,
+                          double sigma) {
+  cv::Mat _src = src.getMat();
+
+  cv::Mat src_dft;
+  freq(_src, src_dft, true);
+
+  for (int i = 0; i < src_dft.rows; i++) {
+    cv::Vec2f *p = src_dft.ptr<cv::Vec2f>(i);
+    for (int j = 0; j < src_dft.cols; j++) {
+      float d = sqrt(pow(i - (float)src_dft.rows / 2, 2) +
+                     pow(j - (float)src_dft.cols / 2, 2));
+      float g = exp(-0.5 * pow(d / sigma, 2));
+      p[j][0] *= g;
+      p[j][1] *= g;
+    }
+  }
+
+  ifft_shift(src_dft, src_dft);
+  cv::idft(src_dft, src_dft, cv::DFT_REAL_OUTPUT);
+  dst.create(src_dft.size(), CV_8UC1);
+  cv::Mat _dst = dst.getMat();
+  cv::normalize(src_dft, src_dft, 0, 255, cv::NORM_MINMAX);
+  src_dft.convertTo(_dst, CV_8UC1);
+}
+
+void butterworth_freq_fliter(cv::InputArray src, cv::OutputArray dst,
+                             double sigma, uchar n) {
+  cv::Mat _src = src.getMat();
+
+  cv::Mat src_dft;
+  freq(_src, src_dft, true);
+
+  for (int i = 0; i < src_dft.rows; i++) {
+    cv::Vec2f *p = src_dft.ptr<cv::Vec2f>(i);
+    for (int j = 0; j < src_dft.cols; j++) {
+      float d = sqrt(pow(i - (float)src_dft.rows / 2, 2) +
+                     pow(j - (float)src_dft.cols / 2, 2));
+      float b = 1 / (1 + pow(d / sigma, n));
+      p[j][0] *= b;
+      p[j][1] *= b;
+    }
+  }
+
+  ifft_shift(src_dft, src_dft);
+  cv::idft(src_dft, src_dft, cv::DFT_REAL_OUTPUT);
+  dst.create(src_dft.size(), CV_8UC1);
+  cv::Mat _dst = dst.getMat();
+  cv::normalize(src_dft, src_dft, 0, 255, cv::NORM_MINMAX);
+  src_dft.convertTo(_dst, CV_8UC1);
 }
 
 } // namespace ex3
