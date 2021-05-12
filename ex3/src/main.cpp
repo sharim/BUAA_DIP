@@ -9,10 +9,6 @@
 
 int main(int argc, char **argv) {
 
-  /* ---------- Read images ---------- */
-  cv::Mat img_cave =
-      cv::imread("../img/src_img/cave.jpg", cv::IMREAD_GRAYSCALE);
-
   /* ---------- Task 1 ---------- */
 #ifdef TASK_1
   cv::Mat img_rect =
@@ -86,6 +82,18 @@ int main(int argc, char **argv) {
 
   /* ---------- Task 4 ---------- */
 #ifdef TASK_4
+  cv::Mat img_cave = cv::imread("../img/src_img/cave.jpg", cv::IMREAD_GRAYSCALE);
+  cv::imshow("cave", img_cave);
+
+  cv::Mat img_cave_dft, img_cave_homo_fliter, img_cave_homo_dft;
+
+  ex3::freq(img_cave, img_cave_dft, true);
+  cv::imshow("cave_dft", img_cave_dft);
+  ex3::homomorphic_fliter(img_cave, img_cave_homo_fliter, 10, 1.5, 0.1, 8);
+  cv::imshow("cave_homo", img_cave_homo_fliter);
+  ex3::freq(img_cave_homo_fliter, img_cave_homo_dft, true);
+  cv::imshow("cave_homo_dft", img_cave_homo_dft);
+  cv::waitKey(0);
 #endif
 
   return 0;

@@ -9,8 +9,7 @@ enum freq_fliter {
   IDEAL_LOWPASS = 0x10,
   IDEAL_HIGHPASS = 0x20,
   GAUSSIAN = 0x30,
-  BUTTERWORTH = 0x40,
-  HOMOMORRPHIC = 0x50
+  BUTTERWORTH = 0x40
 };
 
 void circular_shift(cv::InputArray src, cv::OutputArray dst, cv::Point delta);
@@ -30,6 +29,8 @@ void gaussian_freq_fliter(cv::InputArray src, cv::OutputArray dst,
                           double sigma);
 void butterworth_freq_fliter(cv::InputArray src, cv::OutputArray dst,
                              double sigma, uchar n);
+
+void homomorphic_fliter(cv::InputArray src, cv::OutputArray dst, float h, float sigma, float l, float c);
 
 void circular_shift(cv::InputArray src, cv::OutputArray dst, cv::Point delta) {
   cv::Mat _src = src.getMat();
@@ -233,6 +234,32 @@ void butterworth_freq_fliter(cv::InputArray src, cv::OutputArray dst,
   cv::Mat _dst = dst.getMat();
   cv::normalize(src_dft, src_dft, 0, 255, cv::NORM_MINMAX);
   src_dft.convertTo(_dst, CV_8UC1);
+}
+
+void homomorphic_fliter(cv::InputArray src, cv::OutputArray dst, float sigma, float h, float l, float c) {
+  cv::Mat _src = src.getMat();
+
+  cv::Mat tmp;
+  cv::log(_src, tmp);
+  freq(tmp, tmp, true);
+
+  for (int i = 0; i < tmp.rows; i++) {
+    cv::Vec2f *p = tmp.ptr<cv::Vec2f>(i);
+    for (int j = 0; j < tmp.cols; j++) {
+      float d = sqrt(pow(i - (float)tmp.rows / 2, 2) + pow(j - (float)tmp.cols / 2, 2));
+      float g = (h - l) * (1 - exp(-c * pow(d / sigma, 2))) + l;
+      p[j][0] *= g;
+      p[j][1] *= g;
+    }
+  }
+
+  ifft_shift(tmp, tmp);
+  cv::idft(tmp, tmp, cv::DFT_REAL_OUTPUT);
+  cv::exp(tmp, tmp);
+  dst.create(tmp.size(), CV_8UC1);
+  cv::Mat _dst = dst.getMat();
+  cv::normalize(tmp, tmp, 0, 255, cv::NORM_MINMAX);
+  tmp.convertTo(_dst, CV_8UC1);
 }
 
 } // namespace ex3
