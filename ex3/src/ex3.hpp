@@ -22,7 +22,7 @@ void freq(cv::InputArray src, cv::OutputArray dst, bool shift = false,
           bool _mag = false, bool log = false, bool toUC = true);
 
 void freq_fliter(cv::InputArray src, cv::OutputArray dst, uchar fliter,
-                 double sigma, uchar n=2);
+                 double sigma, uchar n = 2);
 void ideal_freq_fliter(cv::InputArray src, cv::OutputArray dst, uchar fliter,
                        double sigma);
 void gaussian_freq_fliter(cv::InputArray src, cv::OutputArray dst,
@@ -30,7 +30,8 @@ void gaussian_freq_fliter(cv::InputArray src, cv::OutputArray dst,
 void butterworth_freq_fliter(cv::InputArray src, cv::OutputArray dst,
                              double sigma, uchar n);
 
-void homomorphic_fliter(cv::InputArray src, cv::OutputArray dst, float h, float sigma, float l, float c);
+void homomorphic_fliter(cv::InputArray src, cv::OutputArray dst, float sigma,
+                        float h, float l, float c);
 
 void circular_shift(cv::InputArray src, cv::OutputArray dst, cv::Point delta) {
   cv::Mat _src = src.getMat();
@@ -88,7 +89,7 @@ void FT(cv::InputArray src, cv::OutputArray dst, bool _mag, bool log) {
                       cv::Mat::zeros(padded.size(), CV_32F)};
   cv::Mat complexImg;
   cv::merge(planes, 2, complexImg);
-  cv::dft(complexImg, complexImg);
+  cv::dft(complexImg, complexImg, cv::DFT_SCALE);
   if (_mag) {
     cv::split(complexImg, planes);
     cv::magnitude(planes[0], planes[1], planes[0]);
@@ -111,7 +112,7 @@ void FT(cv::InputArray src, cv::OutputArray dst, bool _mag, bool log) {
 void freq(cv::InputArray src, cv::OutputArray dst, bool shift, bool mag,
           bool log, bool toUC) {
   cv::Mat _src = src.getMat();
-  CV_Assert(_src.type() == CV_8UC1);
+  // CV_Assert(_src.type() == CV_8UC1);
   cv::Mat tmp;
   FT(_src, tmp, mag, log);
   if (shift)
@@ -177,7 +178,7 @@ void ideal_freq_fliter(cv::InputArray src, cv::OutputArray dst, uchar fliter,
     }
   }
   ifft_shift(src_dft, src_dft);
-  cv::idft(src_dft, src_dft, cv::DFT_REAL_OUTPUT);
+  cv::idft(src_dft, src_dft, cv::DFT_SCALE | cv::DFT_REAL_OUTPUT);
   dst.create(src_dft.size(), CV_8UC1);
   cv::Mat _dst = dst.getMat();
   cv::normalize(src_dft, src_dft, 0, 255, cv::NORM_MINMAX);
@@ -203,7 +204,7 @@ void gaussian_freq_fliter(cv::InputArray src, cv::OutputArray dst,
   }
 
   ifft_shift(src_dft, src_dft);
-  cv::idft(src_dft, src_dft, cv::DFT_REAL_OUTPUT);
+  cv::idft(src_dft, src_dft, cv::DFT_SCALE | cv::DFT_REAL_OUTPUT);
   dst.create(src_dft.size(), CV_8UC1);
   cv::Mat _dst = dst.getMat();
   cv::normalize(src_dft, src_dft, 0, 255, cv::NORM_MINMAX);
@@ -229,32 +230,37 @@ void butterworth_freq_fliter(cv::InputArray src, cv::OutputArray dst,
   }
 
   ifft_shift(src_dft, src_dft);
-  cv::idft(src_dft, src_dft, cv::DFT_REAL_OUTPUT);
+  cv::idft(src_dft, src_dft, cv::DFT_SCALE | cv::DFT_REAL_OUTPUT);
   dst.create(src_dft.size(), CV_8UC1);
   cv::Mat _dst = dst.getMat();
   cv::normalize(src_dft, src_dft, 0, 255, cv::NORM_MINMAX);
   src_dft.convertTo(_dst, CV_8UC1);
 }
 
-void homomorphic_fliter(cv::InputArray src, cv::OutputArray dst, float sigma, float h, float l, float c) {
+void homomorphic_fliter(cv::InputArray src, cv::OutputArray dst, float sigma,
+                        float h, float l, float c) {
   cv::Mat _src = src.getMat();
 
   cv::Mat tmp;
-  cv::log(_src, tmp);
+  _src.convertTo(tmp, CV_32FC1);
+  cv::log(tmp+1, tmp);
   freq(tmp, tmp, true);
 
   for (int i = 0; i < tmp.rows; i++) {
     cv::Vec2f *p = tmp.ptr<cv::Vec2f>(i);
     for (int j = 0; j < tmp.cols; j++) {
-      float d = sqrt(pow(i - (float)tmp.rows / 2, 2) + pow(j - (float)tmp.cols / 2, 2));
-      float g = (h - l) * (1 - exp(-c * pow(d / sigma, 2))) + l;
+      float d = sqrt(pow(i - (float)tmp.rows / 2, 2) +
+                     pow(j - (float)tmp.cols / 2, 2));
+      float g = (h - l) * (1 - exp(-1 * c * pow(d / sigma, 2))) + l;
       p[j][0] *= g;
       p[j][1] *= g;
+      // std::cout << "g=" << g << " " << p[j][0] << " " << p[j][1] << std::endl;
     }
   }
 
   ifft_shift(tmp, tmp);
-  cv::idft(tmp, tmp, cv::DFT_REAL_OUTPUT);
+  cv::idft(tmp, tmp, cv::DFT_SCALE | cv::DFT_REAL_OUTPUT);
+
   cv::exp(tmp, tmp);
   dst.create(tmp.size(), CV_8UC1);
   cv::Mat _dst = dst.getMat();
